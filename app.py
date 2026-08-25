@@ -99,6 +99,21 @@ def contact():
     flash('Thank you for your message! I\'ll get back to you soon.', 'success')
     return redirect(url_for('home') + '#contact')
 
+# ========== KEEP-ALIVE: Prevent Render from sleeping ==========
+@app.route('/ping')
+def ping():
+    return "OK", 200
+
+# ========== FIX: Handle 404 Errors ==========
+@app.errorhandler(404)
+def page_not_found(e):
+    return redirect(url_for('home'))
+
+# ========== FIX: Handle any unknown routes ==========
+@app.route('/<path:path>')
+def catch_all(path):
+    return redirect(url_for('home'))
+
 if __name__ == '__main__':
     # For Render - use PORT environment variable or default to 10000
     port = int(os.environ.get('PORT', 10000))
