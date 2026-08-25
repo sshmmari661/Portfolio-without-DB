@@ -12,7 +12,7 @@ settings = {
     'hero_name': 'Sara AlShammari',
     'hero_tagline': 'Software Engineer focused on designing and developing scalable, high-quality digital solutions. I specialize in full-stack development, intuitive UI/UX, and efficient database architecture, with a strong emphasis on performance, reliability, and user experience.',
     'hero_location': 'BASED IN RIYADH, SAUDI ARABIA',
-    'hero_image_url': '/static/images/profile.jpg',
+    'hero_image_url': '/static/images/logo.png',
     'contact_phone': '+966 56 977 6259',
     'contact_email': 's.alshammari661@outlook.com',
     'linkedin_url': 'https://www.linkedin.com/in/sara-alshammari-sa661',
@@ -74,7 +74,7 @@ projects = [
         ],
         'description': 'A comprehensive task management application currently in development. Features will include task creation, categorization, priority setting, deadline tracking, and team collaboration tools.',
         'project_link': '#',
-        'is_coming_soon': True  # Flag to show "Under Development" overlay
+        'is_coming_soon': True
     }
 ]
 
@@ -100,4 +100,6 @@ def contact():
     return redirect(url_for('home') + '#contact')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # For Render - use PORT environment variable or default to 10000
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port, debug=False)  # debug=False for production
