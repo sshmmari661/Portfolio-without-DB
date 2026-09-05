@@ -1,11 +1,53 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import os
+import threading
+import time
+import requests
 from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-# ========== STATIC DATA (No Database) ==========
+# ========== AUTO SELF-PING SYSTEM ==========
+def auto_ping():
+    """Automatically ping the app every 10 minutes to prevent sleep"""
+    
+    # Wait 60 seconds after startup before first ping
+    time.sleep(60)
+    
+    while True:
+        try:
+            # Get the app's public URL from Render environment
+            app_url = os.environ.get('RENDER_EXTERNAL_URL')
+            
+            # Fallback for local development
+            if not app_url:
+                app_url = f"http://localhost:{os.environ.get('PORT', 10000)}"
+            
+            # Ping the /ping endpoint
+            url = f"{app_url}/ping"
+            response = requests.get(url, timeout=10)
+            
+            timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+            print(f"✅ Auto-ping at {timestamp} - Status: {response.status_code}")
+            
+        except Exception as e:
+            timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+            print(f"❌ Auto-ping failed at {timestamp} - Error: {str(e)}")
+        
+        # Wait 10 minutes (600 seconds) before next ping
+        time.sleep(600)
+
+# Start the auto-ping thread when the app starts
+# This prevents Render from putting your app to sleep
+if not os.environ.get('DEBUG_MODE') and os.environ.get('RENDER_EXTERNAL_URL'):
+    ping_thread = threading.Thread(target=auto_ping, daemon=True)
+    ping_thread.start()
+    print("🚀 Auto-ping thread started successfully!")
+else:
+    print("ℹ️  Auto-ping disabled (debug mode or local environment)")
+
+# ========== STATIC DATA ==========
 
 settings = {
     'nav_logo': 'SARA PORTFOLIO',
@@ -58,7 +100,8 @@ projects = [
             '/static/images/project1_2.png'
         ],
         'description': 'Daily Sanctuary is a completed personal web application project focused on entertainment and positive user engagement. The website dynamically generates random messages ranging from fun and lighthearted content to spiritual and motivational reflections. Through this project, I worked on designing the application structure, implementing random message generation functionality, and creating a simple, user-friendly web experience.',
-        'project_link': '#'
+        'project_link': '#',
+        'is_coming_soon': False
     },
     {
         'title': 'Task Manager',
@@ -86,6 +129,21 @@ def home():
                          skills=skills,
                          projects=projects)
 
+@app.route('/ping')
+def ping():
+    """Keep-alive endpoint - returns OK status"""
+    return "OK", 200
+
+@app.route('/status')
+def status():
+    """Check app status and uptime"""
+    return {
+        "status": "running",
+        "timestamp": datetime.utcnow().isoformat(),
+        "message": "🚀 Portfolio is live and active!",
+        "auto_ping": "Active - pinging every 10 minutes"
+    }, 200
+
 @app.route('/contact', methods=['POST'])
 def contact():
     name = request.form.get('name', '').strip()
@@ -99,22 +157,14 @@ def contact():
     flash('Thank you for your message! I\'ll get back to you soon.', 'success')
     return redirect(url_for('home') + '#contact')
 
-# ========== KEEP-ALIVE: Prevent Render from sleeping ==========
-@app.route('/ping')
-def ping():
-    return "OK", 200
-
-# ========== FIX: Handle 404 Errors ==========
 @app.errorhandler(404)
 def page_not_found(e):
     return redirect(url_for('home'))
 
-# ========== FIX: Handle any unknown routes ==========
 @app.route('/<path:path>')
 def catch_all(path):
     return redirect(url_for('home'))
 
 if __name__ == '__main__':
-    # For Render - use PORT environment variable or default to 10000
     port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port, debug=False)  # debug=False for production
+    app.run(host='0.0.0.0', port=port, debug=False)
